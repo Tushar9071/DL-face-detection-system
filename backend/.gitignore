@@ -7,3 +7,8 @@ instance
 *.log
 .env
 .DS_Store
+/images/
+*.jpg
+*.jpeg
+*.png
+/face_detection_models/embaddings.pt
