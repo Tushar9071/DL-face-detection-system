@@ -43,7 +43,10 @@ export default function Predict_face() {
   }, []);
 
   const connectWebSocket = () => {
-    ws.current = new WebSocket(import.meta.env.VITE_BACKEND_URL_WS + "/api/students/ws/face_recognition");
+    // ws.current = new WebSocket(import.meta.env.VITE_BACKEND_URL_WS + "/api/students/ws/face_recognition");
+    ws.current = new WebSocket(
+      "ws://localhost:8000/api/students/ws/face_recognition"
+    );
 
     ws.current.onopen = () => {
       // console.log("Connected to WebSocket");

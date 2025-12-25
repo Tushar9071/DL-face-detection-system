@@ -87,7 +87,7 @@ def predict_image(image):
 if __name__ == "__main__":
     test_base64_str = ""
 
-    img = Image.open("tushar.jpg").convert("RGB")
+    img = Image.open("test.jpg").convert("RGB")
     # image = base64_to_image()
     if img:
         name, distance, message = predict_image(img)

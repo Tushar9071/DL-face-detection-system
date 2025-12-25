@@ -19,7 +19,6 @@ print(f"Embaddings path: {EMBADDINGS_PATH}")
 
 
 def load_or_create_embeddings(path: str):
-
     if os.path.exists(path):
         try:
             data = torch.load(path, map_location="cpu")
@@ -63,9 +62,11 @@ def update_student_dataset_embaddings(enrollment_number: str, image_path: str):
     stacked_vectors = torch.cat(vectors)
     mean_embadding = torch.mean(stacked_vectors, dim=0)
 
-    mean_embadding = (
-        mean_embadding / mean_embadding.norm()
-    )  ## also we can you mean_embadding.unsqueeze(0)
+    # mean_embadding = (
+    #     mean_embadding / mean_embadding.norm()
+    # )  ## also we can you mean_embadding.unsqueeze(0)
+
+    mean_embadding = torch.nn.functional.normalize(mean_embadding, p=2, dim=0)
 
     existing_embeddings_tensor, existing_names = load_or_create_embeddings(
         EMBADDINGS_PATH

@@ -7,6 +7,7 @@ from db import engine, Base
 import base64
 from PIL import Image
 import io
+import torch
 
 
 load_dotenv()
@@ -29,6 +30,7 @@ async def startup_event():
     DATABASE_URL = os.getenv("DATABASE_URL")
     print(f"Images path: {images_path}")
     print(f"Database URL: {DATABASE_URL}")
+    print("Device is working on:", "cuda" if torch.cuda.is_available() else "cpu")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 

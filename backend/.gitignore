@@ -12,3 +12,6 @@ instance
 *.jpeg
 *.png
 /face_detection_models/embaddings.pt
+/test folder
+images
+face_bboxes.csv
