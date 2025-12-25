@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import DisplayCamera from "./camera_models/display_camera";
 import Predict_face from "./camera_models/Predict";
 import Navbar from "./components/navbar";
+import AdminPanel from "./pages/AdminPanel";
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
             <Route path="/" element={<Predict_face />} />
             <Route path="/predict" element={<Predict_face />} />
             <Route path="/camera-access" element={<DisplayCamera />} />
+            <Route path="/admin" element={<AdminPanel />} />
           </Routes>
         </div>
       </div>

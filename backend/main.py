@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from routes.students import router as students_router
 import os
 from dotenv import load_dotenv
@@ -12,6 +13,8 @@ import torch
 
 load_dotenv()
 app = FastAPI()
+
+app.mount("/images", StaticFiles(directory="images"), name="images")
 
 app.include_router(students_router, prefix="/api/students")
 app.add_middleware(

@@ -1,4 +1,4 @@
-import { LayoutDashboard, ScanFace, Video } from "lucide-react";
+import { LayoutDashboard, ScanFace, Video, Settings } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 export default function Navbar() {
@@ -34,7 +34,15 @@ export default function Navbar() {
               className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center gap-2 ${isActive('/camera-access')}`}
             >
               <Video className="w-4 h-4" />
-              Add new Student
+              Add via Webcam
+            </Link>
+
+            <Link
+              to="/admin"
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center gap-2 ${isActive('/admin')}`}
+            >
+              <Settings className="w-4 h-4" />
+              Admin Panel
             </Link>
           </div>
         </div>

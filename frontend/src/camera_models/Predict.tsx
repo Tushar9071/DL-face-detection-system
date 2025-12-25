@@ -6,7 +6,9 @@ import {
   User,
   ShieldCheck,
   ShieldAlert,
+  Users,
 } from "lucide-react";
+import { getTodayAttendance } from "../services/api";
 
 type ResultType = "neutral" | "success" | "warning" | "error";
 
@@ -20,6 +22,14 @@ interface LogEntry {
   timestamp: number;
 }
 
+interface PresentStudent {
+  student_name: string;
+  enrollment_number: string;
+  time_slot: string;
+  status: string;
+  enter_time: string;
+}
+
 export default function Predict_face() {
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [result, setResult] = useState<ScanResult>({
@@ -28,19 +38,31 @@ export default function Predict_face() {
   });
   const [streamActive, setStreamActive] = useState<boolean>(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [presentStudents, setPresentStudents] = useState<PresentStudent[]>([]);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const ws = useRef<WebSocket | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
+    fetchPresentStudents();
     connectWebSocket();
     return () => {
       stopStreaming();
       if (ws.current) ws.current.close();
     };
   }, []);
+
+  const fetchPresentStudents = async () => {
+    try {
+      const response = await getTodayAttendance();
+      setPresentStudents(response.data);
+    } catch (error) {
+      console.error("Error fetching present students:", error);
+    }
+  };
 
   const connectWebSocket = () => {
     // ws.current = new WebSocket(import.meta.env.VITE_BACKEND_URL_WS + "/api/students/ws/face_recognition");
@@ -56,6 +78,7 @@ export default function Predict_face() {
 
     ws.current.onmessage = (event: MessageEvent) => {
       const message = event.data;
+      // console.log("WS Message:", message);
       handleServerResponse(message);
     };
 
@@ -75,21 +98,95 @@ export default function Predict_face() {
   };
 
   const handleServerResponse = (message: string) => {
-    let type: ResultType = "neutral";
-    let text = message;
+    const parts = message.split(",");
+    
+    if (parts.length >= 3) {
+        const enrollment = parts[0];
+        // const distance = parts[1];
+        const msg = parts[2];
+        const attendanceMsg = parts.length > 3 ? parts[3] : "";
+        const studentName = parts.length > 4 ? parts[4] : "";
+        
+        // Bounding box parsing
+        let box = null;
+        if (parts.length >= 9) { // enrollment, dist, msg, attMsg, name, x1, y1, x2, y2
+             const x1 = parseFloat(parts[5]);
+             const y1 = parseFloat(parts[6]);
+             const x2 = parseFloat(parts[7]);
+             const y2 = parseFloat(parts[8]);
+             if (!isNaN(x1)) {
+                 box = { x1, y1, x2, y2 };
+             }
+        }
+        
+        drawBox(box);
 
-    if (message.includes("Match:")) {
-      type = "success";
-      const name = message.split("Match:")[1].trim();
-      addLog(name);
-    } else if (message.includes("Unknown")) {
-      type = "warning";
-    } else if (message.includes("No face")) {
-      type = "neutral";
+        let type: ResultType = "neutral";
+        let displayText = `${enrollment} (${msg})`;
+        
+        if (enrollment !== "Unknown" && enrollment !== "error" && enrollment !== "no face") {
+            type = "success";
+            displayText = `Identified: ${studentName || enrollment}`;
+            if (attendanceMsg) {
+                displayText += ` - ${attendanceMsg}`;
+                
+                if (attendanceMsg.toLowerCase().includes("marked")) {
+                    // Update present students list if not already present
+                    setPresentStudents(prev => {
+                        const exists = prev.some(s => s.enrollment_number === enrollment);
+                        if (!exists) {
+                            const now = new Date();
+                            const timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                            return [{
+                                student_name: studentName || enrollment,
+                                enrollment_number: enrollment,
+                                time_slot: "Just Now", 
+                                status: "Present",
+                                enter_time: timeString
+                            }, ...prev];
+                        }
+                        return prev;
+                    });
+                }
+            }
+            addLog(displayText);
+        } else if (enrollment === "Unknown") {
+            type = "warning";
+            displayText = "Unknown Face";
+        } else {
+             displayText = msg;
+        }
+        
+        setResult({ text: displayText, type });
+    } else {
+        setResult({ text: message, type: "neutral" });
     }
-
-    setResult({ text, type });
   };
+
+  const drawBox = (box: { x1: number, y1: number, x2: number, y2: number } | null) => {
+      const canvas = overlayCanvasRef.current;
+      const video = videoRef.current;
+      if (!canvas || !video) return;
+
+      // Ensure canvas internal resolution matches video resolution
+      if (video.videoWidth > 0 && (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight)) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+      }
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      // Clear previous drawings
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (box) {
+          ctx.strokeStyle = '#00FF00'; // Green box
+          ctx.lineWidth = 3;
+          ctx.strokeRect(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+      }
+  };
+
 
   const addLog = (entry: string) => {
     setLogs((prev) => {
@@ -226,6 +323,14 @@ export default function Predict_face() {
                 }`}
               />
 
+              {/* Overlay Canvas for Bounding Boxes */}
+              <canvas 
+                ref={overlayCanvasRef} 
+                className={`absolute inset-0 w-full h-full pointer-events-none transform scale-x-[-1] ${
+                  !streamActive ? "hidden" : ""
+                }`}
+              />
+
               {/* Hidden canvas for processing */}
               <canvas ref={canvasRef} className="hidden" />
 
@@ -253,6 +358,45 @@ export default function Predict_face() {
                   <p className="font-mono text-sm opacity-90">{result.text}</p>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Sidebar: Present Students */}
+          <div className="bg-gray-800 rounded-2xl p-4 border border-gray-700 h-full flex flex-col max-h-[600px]">
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-300">
+              <Users className="w-5 h-5" /> Present Students ({presentStudents.length})
+            </h2>
+
+            <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar">
+              {presentStudents.length === 0 ? (
+                <div className="text-center text-gray-500 py-10 text-sm italic">
+                  No students marked present yet.
+                </div>
+              ) : (
+                presentStudents.map((student, i) => (
+                  <div
+                    key={i}
+                    className="bg-gray-700/50 p-3 rounded-lg border border-gray-600 flex items-center justify-between animate-fade-in"
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium text-blue-300">
+                        {student.student_name}
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        {student.enrollment_number}
+                      </span>
+                    </div>
+                    <div className="flex flex-col items-end">
+                        <span className="text-xs text-green-400 font-mono bg-green-900/30 px-2 py-0.5 rounded">
+                            {student.status}
+                        </span>
+                        <span className="text-[10px] text-gray-500 mt-1">
+                            {student.enter_time || student.time_slot}
+                        </span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 

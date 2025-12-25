@@ -24,5 +24,18 @@ class StudentImage(Base):
     created_at = Column(DateTime(timezone=True),server_default=func.now())
     
     student = relationship("Student",back_populates="images")
+
+
+class Attendance(Base):
+    __tablename__ = "attendance"
+
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    date = Column(DateTime(timezone=True), server_default=func.now())
+    time_slot = Column(String, nullable=False)
+    status = Column(String, default="Present")
     
+    student = relationship("Student", back_populates="attendance")
+
+Student.attendance = relationship("Attendance", back_populates="student")
     
