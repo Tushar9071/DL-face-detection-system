@@ -11,13 +11,18 @@ from matplotlib import pyplot as plt
 
 env_file = Path(__file__).resolve().parent.parent
 
-SAVED_EMBADDINGS_PATH = env_file / "face_detection_models" / "embaddings.pt"
+MODELS_PATH = os.getenv("MODELS_PATH")
+if MODELS_PATH:
+    SAVED_EMBADDINGS_PATH = Path(MODELS_PATH) / "embaddings.pt"
+else:
+    SAVED_EMBADDINGS_PATH = env_file / "face_detection_models" / "embaddings.pt"
+
 embadding_list = None
 name_list = None
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-mtcnn = MTCNN(device=device, keep_all=False, min_face_size=40)
+mtcnn = MTCNN(device=device, keep_all=False, min_face_size=20)
 resnet = InceptionResnetV1(pretrained="vggface2").eval().to(device)
 
 
@@ -84,8 +89,9 @@ def predict_image(image):
         image = image.resize((640, new_height), Image.Resampling.LANCZOS)
 
     blur_score = get_blur_score(image)
-    # print(f"Blur Score: {blur_score}")
-    if blur_score < 100:  # Threshold for blurriness
+    print(f"Blur Score: {blur_score}")
+    if blur_score < 50:  # Threshold for blurriness
+        print("Image rejected due to blur")
         return "Unknown", 0, "Image too blurry", None
 
     try:
@@ -93,6 +99,7 @@ def predict_image(image):
         boxes, probs = mtcnn.detect(image)
         
         if boxes is None:
+            print("MTCNN failed to detect face")
             return "no face", 0, "No face detected", None
 
         # Get the largest face
@@ -107,7 +114,8 @@ def predict_image(image):
         confidence = probs[0] if probs is not None else 0
 
         # 2. Stricter Face Detection Confidence
-        if confidence < 0.95:
+        if confidence < 0.85:
+            print(f"Face rejected due to low confidence: {confidence}")
             return "Unknown", 0, f"Low confidence ({confidence:.2f})", box.tolist()
 
         image_embadding = resnet(img_cropped.unsqueeze(0).to(device)).detach()

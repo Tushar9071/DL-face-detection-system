@@ -1,0 +1,66 @@
+services:
+  # ------------------------------------
+  # 1. Backend Service (Docker Web Service)
+  # ------------------------------------
+  - type: web
+    name: face-recognition-backend
+    runtime: docker
+    rootDir: backend
+    
+    # We need a persistent disk to store Images and Face Embeddings.
+    # Without this, all data is lost when the app restarts.
+    # WARNING: Persistent Disks are a PAID feature on Render (Standard plan or higher).
+    disk:
+      name: face_data
+      mountPath: /var/lib/face_data
+      sizeGB: 1
+    
+    # Environment Variables
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: face_db
+          property: connectionString
+      - key: IMAGES_PATH
+        value: /var/lib/face_data/images
+      - key: MODELS_PATH
+        value: /var/lib/face_data/models
+      - key: PYTHONUNBUFFERED
+        value: "true"
+
+  # ------------------------------------
+  # 2. Frontend Service (Static Site)
+  # ------------------------------------
+  - type: static
+    name: face-recognition-frontend
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    publishDir: dist
+    
+    # Make the backend URL available during the build for the React app
+    envVars:
+      - key: VITE_BACKEND_URL
+        fromService:
+          type: web
+          name: face-recognition-backend
+          # Render exposes the external URL of the service here
+          envVarKey: RENDER_EXTERNAL_URL
+      # For WebSocket, we need to construct it (handled in code or here if needed, but api.ts handles substitution usually)
+      # The code uses VITE_BACKEND_URL_WS or falls back. 
+      # Since we only get HTTP URL here, we might need a small code tweak or assume the code can handle "http" -> "ws" conversion.
+      # Or:
+      - key: VITE_BACKEND_URL_WS
+        fromService:
+          type: web
+          name: face-recognition-backend
+          envVarKey: RENDER_EXTERNAL_URL
+
+databases:
+  # ------------------------------------
+  # 3. PostgreSQL Database
+  # ------------------------------------
+  - name: face_db
+    databaseName: face_db
+    user: admin
+    plan: free # Limits: 90 days usage, no backups. Upgrade for production.
+

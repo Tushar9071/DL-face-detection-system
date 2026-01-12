@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Camera,
   Wifi,
@@ -37,7 +37,7 @@ export default function Predict_face() {
     type: "neutral",
   });
   const [streamActive, setStreamActive] = useState<boolean>(false);
-  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [, setLogs] = useState<LogEntry[]>([]);
   const [presentStudents, setPresentStudents] = useState<PresentStudent[]>([]);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -65,10 +65,16 @@ export default function Predict_face() {
   };
 
   const connectWebSocket = () => {
-    // ws.current = new WebSocket(import.meta.env.VITE_BACKEND_URL_WS + "/api/students/ws/face_recognition");
-    ws.current = new WebSocket(
-      "ws://localhost:8000/api/students/ws/face_recognition"
-    );
+      let wsUrl = import.meta.env.VITE_BACKEND_URL_WS;
+      if (!wsUrl && import.meta.env.VITE_BACKEND_URL) {
+          // Fallback: convert HTTP to WS if VITE_BACKEND_URL is present but WS is not
+          wsUrl = import.meta.env.VITE_BACKEND_URL.replace(/^http/, 'ws');
+      }
+
+    ws.current = new WebSocket(wsUrl + "/api/students/ws/face_recognition");
+    // ws.current = new WebSocket(
+    //   "ws://10.20.72.7:8000/api/students/ws/face_recognition"
+    // );
 
     ws.current.onopen = () => {
       // console.log("Connected to WebSocket");

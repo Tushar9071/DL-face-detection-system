@@ -1,57 +1,26 @@
-# ----------------------
-# BASE IMAGE – Python 3.10
-# ----------------------
-FROM python:3.10-slim
+# Use official Python image
+FROM python:3.11-slim
 
-# Avoid Python writing .pyc files & enable stdout logs
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-# ----------------------
-# Install system libs needed by Pillow & other ML deps
-# ----------------------
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    gcc \
-    libjpeg-dev \
-    zlib1g-dev \
-    libpng-dev \
-    libtiff5-dev \
-    libfreetype6-dev \
-    libwebp-dev \
-    liblcms2-dev \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# ----------------------
-# Set work directory
-# ----------------------
+# Set working directory
 WORKDIR /app
 
-# ----------------------
-# Install dependencies
-# ----------------------
-COPY requirements.txt /app/
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    libgl1 \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --upgrade pip setuptools wheel
-RUN pip install -r requirements.txt
+# Copy requirements first to leverage Docker cache
+COPY requirements.txt .
 
-# ----------------------
-# Copy application
-# ----------------------
-COPY . /app
+# Install python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-# ----------------------
+# Copy the rest of the application
+COPY . .
+
 # Expose port
-# ----------------------
 EXPOSE 8000
 
-# ----------------------
-# Start FastAPI with Gunicorn + Uvicorn workers
-# ----------------------
-CMD ["gunicorn", \
-     "-k", "uvicorn.workers.UvicornWorker", \
-     "-w", "4", \
-     "--threads", "4", \
-     "--bind", "0.0.0.0:8000", \
-     "main:app"]
+# Run the application
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

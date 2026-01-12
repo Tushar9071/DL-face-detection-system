@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import {
   uploadStudentData,
-  getAttendance,
   getAllStudents,
   deleteStudent,
   getStats,

@@ -1,0 +1,55 @@
+services:
+  backend:
+    build: 
+      context: ./backend
+    container_name: backend_app
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    volumes:
+      - face_images_data:/app/images
+      # - ./backend/images:/app/images
+      - face_models_data:/app/face_detection_models
+      # - ./backend/face_detection_models:/app/face_detection_models
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/face_db
+      - IMAGES_PATH=./images
+    networks:
+      - app_network
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: frontend_app
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    networks:
+      - app_network
+
+  db:
+    image: postgres:15-alpine
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: face_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  face_models_data:
+  face_images_data:

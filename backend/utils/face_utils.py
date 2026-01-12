@@ -14,7 +14,12 @@ resnet = InceptionResnetV1(pretrained="vggface2").eval().to(device)
 current_file_dir = Path(__file__).resolve().parent
 models_dir = (current_file_dir.parent / "face_detection_models").resolve()
 
-EMBADDINGS_PATH = (models_dir / "embaddings.pt").resolve()
+MODELS_PATH = os.getenv("MODELS_PATH")
+if MODELS_PATH:
+    EMBADDINGS_PATH = (Path(MODELS_PATH) / "embaddings.pt").resolve()
+else:
+    EMBADDINGS_PATH = (models_dir / "embaddings.pt").resolve()
+
 print(f"Embaddings path: {EMBADDINGS_PATH}")
 
 

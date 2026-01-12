@@ -1,0 +1,40 @@
+__pycache__
+.vscode
+# images
+linux_py_3.11
+linux_py_3
+linux_venv
+test folder
+venv
+.env
+
+
+# Large model and asset files
+*.image
+*.img
+# *.jpg
+# *.pt
+# *.pth
+*.onnx
+*.h5
+*.ckpt
+*.tar.gz
+*.zip
+*.mp4
+*.mov
+*.mkv
+
+# Python build/artifacts
+*.pyc
+*.pyo
+*.pyd
+__pycache__
+*.egg-info
+dist/
+build/
+
+# Specific heavy folders/files in this repo
+face_detection_models/embaddings.pt
+face_detection_models/test models/
+linux_py_3.11/
+linux_venv/
